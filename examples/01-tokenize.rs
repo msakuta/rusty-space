@@ -12,10 +12,8 @@ fn main() {
 fn source(mut input: &str) -> Vec<Token> {
     let mut tokens = vec![];
     while !input.is_empty() {
-        input = if let Some((next_input, token)) = token(input) {
-            if let Some(token) = token {
-                tokens.push(token);
-            }
+        input = if let (next_input, Some(token)) = token(input) {
+            tokens.push(token);
             next_input
         } else {
             break;
@@ -30,22 +28,25 @@ enum Token {
     Number,
 }
 
-fn token(input: &str) -> Option<(&str, Option<Token>)> {
-    let whitespace_res = whitespace(input);
-    let ident_res = ident(input);
-    let number_res = number(input);
-    [whitespace_res, ident_res, number_res]
-        .into_iter()
-        .min_by(|x, y| x.0.len().cmp(&y.0.len()))
+fn token(input: &str) -> (&str, Option<Token>) {
+    if let (next_input, Some(ident_res)) = ident(whitespace(input)) {
+        return (next_input, Some(ident_res));
+    }
+
+    if let (next_input, Some(number_res)) = number(whitespace(input)) {
+        return (next_input, Some(number_res));
+    }
+
+    (input, None)
 }
 
-fn whitespace(mut input: &str) -> (&str, Option<Token>) {
+fn whitespace(mut input: &str) -> &str {
     while matches!(input.chars().next(), Some(' ')) {
         let mut chars = input.chars();
         chars.next();
         input = chars.as_str();
     }
-    (input, None)
+    input
 }
 
 fn ident(mut input: &str) -> (&str, Option<Token>) {
@@ -58,8 +59,10 @@ fn ident(mut input: &str) -> (&str, Option<Token>) {
             chars.next();
             input = chars.as_str();
         }
+        (input, Some(Token::Ident))
+    } else {
+        (input, None)
     }
-    (input, Some(Token::Ident))
 }
 
 fn number(mut input: &str) -> (&str, Option<Token>) {
@@ -72,8 +75,10 @@ fn number(mut input: &str) -> (&str, Option<Token>) {
             chars.next();
             input = chars.as_str();
         }
+        (input, Some(Token::Number))
+    } else {
+        (input, None)
     }
-    (input, Some(Token::Number))
 }
 
 #[cfg(test)]
