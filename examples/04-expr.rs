@@ -1,18 +1,18 @@
 fn main() {
     let input = "123";
-    println!("source: {:?}, parsed: {:?}", input, source(input));
+    println!("source: {:?}, parsed: {:?}", input, expr(input));
 
     let input = "Hello + world";
-    println!("source: {:?}, parsed: {:?}", input, source(input));
+    println!("source: {:?}, parsed: {:?}", input, expr(input));
 
     let input = "(123 + 456 ) + world";
-    println!("source: {:?}, parsed: {:?}", input, source(input));
+    println!("source: {:?}, parsed: {:?}", input, expr(input));
 
     let input = "car + cdr + cdr";
-    println!("source: {:?}, parsed: {:?}", input, source(input));
+    println!("source: {:?}, parsed: {:?}", input, expr(input));
 
     let input = "((1 + 2) + (3 + 4)) + 5 + 6";
-    println!("source: {:?}, parsed: {:?}", input, source(input));
+    println!("source: {:?}, parsed: {:?}", input, expr(input));
 }
 
 fn advance_char(input: &str) -> &str {
@@ -25,7 +25,7 @@ fn peek_char(input: &str) -> Option<char> {
     input.chars().next()
 }
 
-fn source(input: &str) -> Option<(&str, Expression)> {
+fn expr(input: &str) -> Option<(&str, Expression)> {
     if let Some(res) = add(input) {
         return Some(res);
     }
@@ -40,7 +40,7 @@ fn source(input: &str) -> Option<(&str, Expression)> {
 fn paren(input: &str) -> Option<(&str, Expression)> {
     let next_input = lparen(whitespace(input))?;
 
-    let (next_input, expr) = source(next_input)?;
+    let (next_input, expr) = expr(next_input)?;
 
     let next_input = rparen(whitespace(next_input))?;
 
@@ -68,12 +68,9 @@ fn add(mut input: &str) -> Option<(&str, Expression)> {
 
     let left = left?;
 
-    let (next_input, rhs) = source(input)?;
+    let (next_input, rhs) = expr(input)?;
 
-    Some((
-        next_input,
-        Expression::Add(Box::new(left), Box::new(rhs)),
-    ))
+    Some((next_input, Expression::Add(Box::new(left), Box::new(rhs))))
 }
 
 fn term(input: &str) -> Option<(&str, Expression)> {
