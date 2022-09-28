@@ -2,7 +2,7 @@ use nom::{
     branch::alt,
     bytes::complete::tag,
     character::complete::{alpha1, alphanumeric1, char, multispace0},
-    combinator::recognize,
+    combinator::{opt, recognize},
     multi::{fold_many0, many0},
     number::complete::recognize_float,
     sequence::{delimited, pair},
@@ -27,6 +27,7 @@ enum Token<'src> {
 #[derive(Debug, PartialEq, Clone)]
 enum Expression<'src> {
     Value(Token<'src>),
+    FnInvoke(&'src str, Vec<Expression<'src>>),
     Add(Box<Expression<'src>>, Box<Expression<'src>>),
     Sub(Box<Expression<'src>>, Box<Expression<'src>>),
     Mul(Box<Expression<'src>>, Box<Expression<'src>>),
@@ -34,7 +35,26 @@ enum Expression<'src> {
 }
 
 fn factor(i: &str) -> IResult<&str, Expression> {
-    alt((number, ident, parens))(i)
+    alt((number, func_call, ident, parens))(i)
+}
+
+fn func_call(i: &str) -> IResult<&str, Expression> {
+    let (r, ident) = delimited(multispace0, identifier, multispace0)(i)?;
+    // println!("func_invoke ident: {}", ident);
+    let (r, args) = delimited(
+        multispace0,
+        delimited(
+            tag("("),
+            many0(delimited(
+                multispace0,
+                expr,
+                delimited(multispace0, opt(tag(",")), multispace0),
+            )),
+            tag(")"),
+        ),
+        multispace0,
+    )(r)?;
+    Ok((r, Expression::FnInvoke(ident, args)))
 }
 
 fn ident(input: &str) -> IResult<&str, Expression> {
