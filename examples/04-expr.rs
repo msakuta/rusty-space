@@ -59,7 +59,7 @@ fn paren(input: &str) -> (&str, Option<Expression>) {
     (next_input, Some(expr))
 }
 
-fn add(input: &str) -> (&str, Option<Expression>) {
+fn add_term(input: &str) -> (&str, Option<Expression>) {
     let (next_input, lhs) = if let (next_input, Some(lhs)) = term(input) {
         (next_input, lhs)
     } else {
@@ -72,7 +72,25 @@ fn add(input: &str) -> (&str, Option<Expression>) {
         return (input, None);
     };
 
-    let (next_input, rhs) = if let (next_input, Some(rhs)) = source(next_input) {
+    (next_input, Some(lhs))
+}
+
+fn add(mut input: &str) -> (&str, Option<Expression>) {
+    let mut left = None;
+    while let (next_input, Some(expr)) = add_term(input) {
+        if let Some(prev_left) = left {
+            left = Some(Expression::Add(Box::new(prev_left), Box::new(expr)));
+        } else {
+            left = Some(expr);
+        }
+        input = next_input;
+    }
+
+    if left.is_none() {
+        return (input, None);
+    }
+
+    let (next_input, rhs) = if let (next_input, Some(rhs)) = source(input) {
         (next_input, rhs)
     } else {
         return (input, None);
@@ -80,7 +98,7 @@ fn add(input: &str) -> (&str, Option<Expression>) {
 
     (
         next_input,
-        Some(Expression::Add(Box::new(lhs), Box::new(rhs))),
+        Some(Expression::Add(Box::new(left.unwrap()), Box::new(rhs))),
     )
 }
 
