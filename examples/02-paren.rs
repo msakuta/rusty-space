@@ -118,7 +118,7 @@ mod test {
 
     #[test]
     fn test_whitespace() {
-        assert_eq!(whitespace("    "), ("", None));
+        assert_eq!(whitespace("    "), "");
     }
 
     #[test]
