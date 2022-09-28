@@ -25,62 +25,60 @@ fn peek_char(input: &str) -> Option<char> {
     input.chars().next()
 }
 
-fn source(input: &str) -> (&str, Option<Expression>) {
-    if let (next_input, Some(expr)) = add(input) {
-        return (next_input, Some(expr));
+fn source(input: &str) -> Option<(&str, Expression)> {
+    if let Some(res) = add(input) {
+        return Some(res);
     }
 
-    if let (next_input, Some(expr)) = term(input) {
-        return (next_input, Some(expr));
+    if let Some(res) = term(input) {
+        return Some(res);
     }
 
-    (input, None)
+    None
 }
 
-fn paren(input: &str) -> (&str, Option<Expression>) {
-    let next_input = if let (next_input, Some(_)) = lparen(whitespace(input)) {
+fn paren(input: &str) -> Option<(&str, Expression)> {
+    let next_input = if let Some(next_input) = lparen(whitespace(input)) {
         next_input
     } else {
-        return (input, None);
+        return None;
     };
 
-    let (next_input, expr) =
-        if let (next_input, Some(expr)) = source(next_input) {
-            (next_input, expr)
-        } else {
-            return (input, None);
-        };
+    let (next_input, expr) = if let Some(res) = source(next_input) {
+        res
+    } else {
+        return None;
+    };
 
-    let next_input =
-        if let (next_input, Some(_)) = rparen(whitespace(next_input)) {
-            next_input
-        } else {
-            return (input, None);
-        };
+    let next_input = if let Some(next_input) = rparen(whitespace(next_input)) {
+        next_input
+    } else {
+        return None;
+    };
 
-    (next_input, Some(expr))
+    Some((next_input, expr))
 }
 
-fn add_term(input: &str) -> (&str, Option<Expression>) {
-    let (next_input, lhs) = if let (next_input, Some(lhs)) = term(input) {
-        (next_input, lhs)
+fn add_term(input: &str) -> Option<(&str, Expression)> {
+    let (next_input, lhs) = if let Some(res) = term(input) {
+        res
     } else {
-        return (input, None);
+        return None;
     };
 
-    let next_input = if let (next_input, Some(_)) = plus(whitespace(next_input))
+    let next_input = if let Some((next_input, _)) = plus(whitespace(next_input))
     {
         next_input
     } else {
-        return (input, None);
+        return None;
     };
 
-    (next_input, Some(lhs))
+    Some((next_input, lhs))
 }
 
-fn add(mut input: &str) -> (&str, Option<Expression>) {
+fn add(mut input: &str) -> Option<(&str, Expression)> {
     let mut left = None;
-    while let (next_input, Some(expr)) = add_term(input) {
+    while let Some((next_input, expr)) = add_term(input) {
         if let Some(prev_left) = left {
             left = Some(Expression::Add(Box::new(prev_left), Box::new(expr)));
         } else {
@@ -90,39 +88,37 @@ fn add(mut input: &str) -> (&str, Option<Expression>) {
     }
 
     if left.is_none() {
-        return (input, None);
+        return None;
     }
 
-    let (next_input, rhs) = if let (next_input, Some(rhs)) = source(input) {
-        (next_input, rhs)
+    let (next_input, rhs) = if let Some(res) = source(input) {
+        res
     } else {
-        return (input, None);
+        return None;
     };
 
-    (
+    Some((
         next_input,
-        Some(Expression::Add(Box::new(left.unwrap()), Box::new(rhs))),
-    )
+        Expression::Add(Box::new(left.unwrap()), Box::new(rhs)),
+    ))
 }
 
-fn term(input: &str) -> (&str, Option<Expression>) {
-    if let (next_input, Some(expr)) = paren(input) {
-        return (next_input, Some(expr));
+fn term(input: &str) -> Option<(&str, Expression)> {
+    if let Some(res) = paren(input) {
+        return Some(res);
     }
 
-    if let (next_input, Some(expr)) = token(input) {
-        return (next_input, Some(Expression::Value(expr)));
+    if let Some((next_input, expr)) = token(input) {
+        return Some((next_input, Expression::Value(expr)));
     }
 
-    (input, None)
+    None
 }
 
 #[derive(Debug, PartialEq)]
 enum Token<'src> {
     Ident(&'src str),
     Number(f64),
-    LParen,
-    RParen,
     Plus,
 }
 
@@ -132,14 +128,14 @@ enum Expression<'src> {
     Add(Box<Expression<'src>>, Box<Expression<'src>>),
 }
 
-fn token(input: &str) -> (&str, Option<Token>) {
+fn token(input: &str) -> Option<(&str, Token)> {
     if let (next_input, Some(res)) = ident(whitespace(input)) {
-        return (next_input, Some(res));
+        return Some((next_input, res));
     }
     if let (next_input, Some(res)) = number(whitespace(input)) {
-        return (next_input, Some(res));
+        return Some((next_input, res));
     }
-    (input, None)
+    None
 }
 
 fn whitespace(mut input: &str) -> &str {
@@ -185,27 +181,27 @@ fn number(mut input: &str) -> (&str, Option<Token>) {
     }
 }
 
-fn lparen(input: &str) -> (&str, Option<Token>) {
-    if matches!(peek_char(input), Some(_x @ '(')) {
-        (advance_char(input), Some(Token::LParen))
+fn lparen(input: &str) -> Option<&str> {
+    if matches!(peek_char(input), Some('(')) {
+        Some(advance_char(input))
     } else {
-        (input, None)
+        None
     }
 }
 
-fn rparen(input: &str) -> (&str, Option<Token>) {
-    if matches!(peek_char(input), Some(_x @ ')')) {
-        (advance_char(input), Some(Token::RParen))
+fn rparen(input: &str) -> Option<&str> {
+    if matches!(peek_char(input), Some(')')) {
+        Some(advance_char(input))
     } else {
-        (input, None)
+        None
     }
 }
 
-fn plus(input: &str) -> (&str, Option<Token>) {
-    if matches!(peek_char(input), Some(_x @ '+')) {
-        (advance_char(input), Some(Token::Plus))
+fn plus(input: &str) -> Option<(&str, Token)> {
+    if matches!(peek_char(input), Some('+')) {
+        Some((advance_char(input), Token::Plus))
     } else {
-        (input, None)
+        None
     }
 }
 
