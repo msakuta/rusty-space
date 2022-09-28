@@ -19,14 +19,9 @@ fn main() {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-enum Token<'src> {
-    Ident(&'src str),
-    Number(f64),
-}
-
-#[derive(Debug, PartialEq, Clone)]
 enum Expression<'src> {
-    Value(Token<'src>),
+    Ident(&'src str),
+    NumLiteral(f64),
     FnInvoke(&'src str, Vec<Expression<'src>>),
     Add(Box<Expression<'src>>, Box<Expression<'src>>),
     Sub(Box<Expression<'src>>, Box<Expression<'src>>),
@@ -59,7 +54,7 @@ fn func_call(i: &str) -> IResult<&str, Expression> {
 
 fn ident(input: &str) -> IResult<&str, Expression> {
     let (r, res) = delimited(multispace0, identifier, multispace0)(input)?;
-    Ok((r, Expression::Value(Token::Ident(res))))
+    Ok((r, Expression::Ident(res)))
 }
 
 fn identifier(input: &str) -> IResult<&str, &str> {
@@ -73,12 +68,12 @@ fn number(input: &str) -> IResult<&str, Expression> {
     let (r, v) = recognize_float(input)?;
     Ok((
         r,
-        Expression::Value(Token::Number(v.parse().map_err(|_| {
+        Expression::NumLiteral(v.parse().map_err(|_| {
             nom::Err::Error(nom::error::Error {
                 input,
                 code: nom::error::ErrorKind::Digit,
             })
-        })?)),
+        })?),
     ))
 }
 
@@ -134,7 +129,7 @@ mod test {
     fn test_number() {
         assert_eq!(
             number("123.45 "),
-            Ok((" ", Expression::Value(Token::Number(123.45))))
+            Ok((" ", Expression::NumLiteral(123.45)))
         );
     }
 }

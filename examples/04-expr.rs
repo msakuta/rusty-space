@@ -38,40 +38,19 @@ fn source(input: &str) -> Option<(&str, Expression)> {
 }
 
 fn paren(input: &str) -> Option<(&str, Expression)> {
-    let next_input = if let Some(next_input) = lparen(whitespace(input)) {
-        next_input
-    } else {
-        return None;
-    };
+    let next_input = lparen(whitespace(input))?;
 
-    let (next_input, expr) = if let Some(res) = source(next_input) {
-        res
-    } else {
-        return None;
-    };
+    let (next_input, expr) = source(next_input)?;
 
-    let next_input = if let Some(next_input) = rparen(whitespace(next_input)) {
-        next_input
-    } else {
-        return None;
-    };
+    let next_input = rparen(whitespace(next_input))?;
 
     Some((next_input, expr))
 }
 
 fn add_term(input: &str) -> Option<(&str, Expression)> {
-    let (next_input, lhs) = if let Some(res) = term(input) {
-        res
-    } else {
-        return None;
-    };
+    let (next_input, lhs) = term(input)?;
 
-    let next_input = if let Some((next_input, _)) = plus(whitespace(next_input))
-    {
-        next_input
-    } else {
-        return None;
-    };
+    let (next_input, _) = plus(whitespace(next_input))?;
 
     Some((next_input, lhs))
 }
@@ -87,19 +66,13 @@ fn add(mut input: &str) -> Option<(&str, Expression)> {
         input = next_input;
     }
 
-    if left.is_none() {
-        return None;
-    }
+    let left = left?;
 
-    let (next_input, rhs) = if let Some(res) = source(input) {
-        res
-    } else {
-        return None;
-    };
+    let (next_input, rhs) = source(input)?;
 
     Some((
         next_input,
-        Expression::Add(Box::new(left.unwrap()), Box::new(rhs)),
+        Expression::Add(Box::new(left), Box::new(rhs)),
     ))
 }
 
