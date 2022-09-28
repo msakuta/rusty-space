@@ -44,17 +44,19 @@ fn paren(input: &str) -> (&str, Option<Expression>) {
         return (input, None);
     };
 
-    let (next_input, expr) = if let (next_input, Some(expr)) = source(next_input) {
-        (next_input, expr)
-    } else {
-        return (input, None);
-    };
+    let (next_input, expr) =
+        if let (next_input, Some(expr)) = source(next_input) {
+            (next_input, expr)
+        } else {
+            return (input, None);
+        };
 
-    let next_input = if let (next_input, Some(_)) = rparen(whitespace(next_input)) {
-        next_input
-    } else {
-        return (input, None);
-    };
+    let next_input =
+        if let (next_input, Some(_)) = rparen(whitespace(next_input)) {
+            next_input
+        } else {
+            return (input, None);
+        };
 
     (next_input, Some(expr))
 }
@@ -66,7 +68,8 @@ fn add_term(input: &str) -> (&str, Option<Expression>) {
         return (input, None);
     };
 
-    let next_input = if let (next_input, Some(_)) = plus(whitespace(next_input)) {
+    let next_input = if let (next_input, Some(_)) = plus(whitespace(next_input))
+    {
         next_input
     } else {
         return (input, None);

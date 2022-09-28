@@ -75,12 +75,14 @@ fn parens(i: &str) -> IResult<&str, Expression> {
     )(i)
 }
 
-pub(crate) fn expr(i: &str) -> IResult<&str, Expression> {
+fn expr(i: &str) -> IResult<&str, Expression> {
     let (i, init) = term(i)?;
 
     fold_many0(
         pair(delimited(multispace0, char('+'), multispace0), term),
         move || init.clone(),
-        |acc, (_op, val): (char, Expression)| Expression::Add(Box::new(acc), Box::new(val)),
+        |acc, (_op, val): (char, Expression)| {
+            Expression::Add(Box::new(acc), Box::new(val))
+        },
     )(i)
 }
