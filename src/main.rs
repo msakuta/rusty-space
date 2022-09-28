@@ -29,9 +29,11 @@ enum Expression<'src> {
     Value(Token<'src>),
     Add(Box<Expression<'src>>, Box<Expression<'src>>),
     Sub(Box<Expression<'src>>, Box<Expression<'src>>),
+    Mul(Box<Expression<'src>>, Box<Expression<'src>>),
+    Div(Box<Expression<'src>>, Box<Expression<'src>>),
 }
 
-fn term(i: &str) -> IResult<&str, Expression> {
+fn factor(i: &str) -> IResult<&str, Expression> {
     alt((number, ident, parens))(i)
 }
 
@@ -68,6 +70,25 @@ fn parens(i: &str) -> IResult<&str, Expression> {
     )(i)
 }
 
+fn term(i: &str) -> IResult<&str, Expression> {
+    let (i, init) = factor(i)?;
+
+    fold_many0(
+        pair(
+            delimited(multispace0, alt((char('*'), char('/'))), multispace0),
+            factor,
+        ),
+        move || init.clone(),
+        |acc, (op, val): (char, Expression)| match op {
+            '*' => Expression::Mul(Box::new(acc), Box::new(val)),
+            '/' => Expression::Div(Box::new(acc), Box::new(val)),
+            _ => panic!(
+                "Multiplicative expression should have '*' or '/' operator"
+            ),
+        },
+    )(i)
+}
+
 fn expr(i: &str) -> IResult<&str, Expression> {
     let (i, init) = term(i)?;
 
@@ -91,6 +112,9 @@ mod test {
 
     #[test]
     fn test_number() {
-        assert_eq!(number("123.45 "), Ok((" ", Expression::Value(Token::Number(123.45)))));
+        assert_eq!(
+            number("123.45 "),
+            Ok((" ", Expression::Value(Token::Number(123.45))))
+        );
     }
 }
