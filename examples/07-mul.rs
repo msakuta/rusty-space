@@ -30,6 +30,12 @@ fn main() {
 
     let input = "(3 + 7) / (2 + 3)";
     println!("source: {:?}, parsed: {:?}", input, ex_eval(input));
+
+    let input = "sin(pi / 4)";
+    println!("source: {:?}, parsed: {:?}", input, ex_eval(input));
+
+    let input = "atan2(1, 1)";
+    println!("source: {:?}, parsed: {:?}", input, ex_eval(input));
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -43,41 +49,43 @@ enum Expression<'src> {
     Div(Box<Expression<'src>>, Box<Expression<'src>>),
 }
 
+fn one_fn(f: fn(f64) -> f64) -> impl Fn(Vec<Expression>) -> f64 {
+    move |args| {
+        f(eval(
+            args.into_iter().next().expect("function missing argument"),
+        ))
+    }
+}
+
+fn two_fn(f: fn(f64, f64) -> f64) -> impl Fn(Vec<Expression>) -> f64 {
+    move |args| {
+        let mut args = args.into_iter();
+        let lhs = eval(
+            args.next()
+                .expect("pow function missing the first argument"),
+        );
+        let rhs = eval(
+            args.next()
+                .expect("pow function missing the second argument"),
+        );
+        f(lhs, rhs)
+    }
+}
+
 fn eval(expr: Expression) -> f64 {
     match expr {
         Expression::Ident("pi") => std::f64::consts::PI,
         Expression::Ident(id) => panic!("Unknown name {:?}", id),
         Expression::NumLiteral(n) => n,
-        Expression::FnInvoke("sin", args) => eval(
-            args.into_iter()
-                .next()
-                .expect("sin function missing argument"),
-        )
-        .sin(),
-        Expression::FnInvoke("cos", args) => eval(
-            args.into_iter()
-                .next()
-                .expect("sin function missing argument"),
-        )
-        .cos(),
-        Expression::FnInvoke("tan", args) => eval(
-            args.into_iter()
-                .next()
-                .expect("sin function missing argument"),
-        )
-        .tan(),
-        Expression::FnInvoke("pow", args) => {
-            let mut args = args.into_iter();
-            let lhs = eval(
-                args.next()
-                    .expect("pow function missing the first argument"),
-            );
-            let rhs = eval(
-                args.next()
-                    .expect("sin function missing the second argument"),
-            );
-            lhs.powf(rhs)
-        }
+        Expression::FnInvoke("sqrt", args) => one_fn(f64::sqrt)(args),
+        Expression::FnInvoke("sin", args) => one_fn(f64::sin)(args),
+        Expression::FnInvoke("cos", args) => one_fn(f64::cos)(args),
+        Expression::FnInvoke("tan", args) => one_fn(f64::tan)(args),
+        Expression::FnInvoke("asin", args) => one_fn(f64::asin)(args),
+        Expression::FnInvoke("acos", args) => one_fn(f64::acos)(args),
+        Expression::FnInvoke("atan", args) => one_fn(f64::atan)(args),
+        Expression::FnInvoke("atan2", args) => two_fn(f64::atan2)(args),
+        Expression::FnInvoke("pow", args) => two_fn(f64::powf)(args),
         Expression::FnInvoke(name, _) => panic!("Unknown function {name:?}"),
         Expression::Add(lhs, rhs) => eval(*lhs) + eval(*rhs),
         Expression::Sub(lhs, rhs) => eval(*lhs) - eval(*rhs),
