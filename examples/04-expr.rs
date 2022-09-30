@@ -185,6 +185,9 @@ mod test {
 
     #[test]
     fn test_number() {
-        assert_eq!(number("123.45 "), Some((" ", Expression::NumLiteral(123.45))));
+        assert_eq!(
+            number("123.45 "),
+            Some((" ", Expression::NumLiteral(123.45)))
+        );
     }
 }
