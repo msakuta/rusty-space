@@ -25,6 +25,13 @@ fn peek_char(input: &str) -> Option<char> {
     input.chars().next()
 }
 
+#[derive(Debug, PartialEq)]
+enum Expression<'src> {
+    Ident(&'src str),
+    NumLiteral(f64),
+    Add(Box<Expression<'src>>, Box<Expression<'src>>),
+}
+
 fn expr(input: &str) -> Option<(&str, Expression)> {
     if let Some(res) = add(input) {
         return Some(res);
@@ -50,7 +57,7 @@ fn paren(input: &str) -> Option<(&str, Expression)> {
 fn add_term(input: &str) -> Option<(&str, Expression)> {
     let (next_input, lhs) = term(input)?;
 
-    let (next_input, _) = plus(whitespace(next_input))?;
+    let next_input = plus(whitespace(next_input))?;
 
     Some((next_input, lhs))
 }
@@ -78,32 +85,19 @@ fn term(input: &str) -> Option<(&str, Expression)> {
         return Some(res);
     }
 
-    if let Some((next_input, expr)) = token(input) {
-        return Some((next_input, Expression::Value(expr)));
+    if let Some(res) = token(input) {
+        return Some(res);
     }
 
     None
 }
 
-#[derive(Debug, PartialEq)]
-enum Token<'src> {
-    Ident(&'src str),
-    Number(f64),
-    Plus,
-}
-
-#[derive(Debug, PartialEq)]
-enum Expression<'src> {
-    Value(Token<'src>),
-    Add(Box<Expression<'src>>, Box<Expression<'src>>),
-}
-
-fn token(input: &str) -> Option<(&str, Token)> {
-    if let (next_input, Some(res)) = ident(whitespace(input)) {
-        return Some((next_input, res));
+fn token(input: &str) -> Option<(&str, Expression)> {
+    if let Some(res) = ident(whitespace(input)) {
+        return Some(res);
     }
-    if let (next_input, Some(res)) = number(whitespace(input)) {
-        return Some((next_input, res));
+    if let Some(res) = number(whitespace(input)) {
+        return Some(res);
     }
     None
 }
@@ -115,7 +109,7 @@ fn whitespace(mut input: &str) -> &str {
     input
 }
 
-fn ident(mut input: &str) -> (&str, Option<Token>) {
+fn ident(mut input: &str) -> Option<(&str, Expression)> {
     let start = input;
     if matches!(peek_char(input), Some(_x @ ('a'..='z' | 'A'..='Z'))) {
         input = advance_char(input);
@@ -127,16 +121,16 @@ fn ident(mut input: &str) -> (&str, Option<Token>) {
         }
     }
     if start.len() == input.len() {
-        (input, None)
+        None
     } else {
-        (
+        Some((
             input,
-            Some(Token::Ident(&start[..(start.len() - input.len())])),
-        )
+            Expression::Ident(&start[..(start.len() - input.len())]),
+        ))
     }
 }
 
-fn number(mut input: &str) -> (&str, Option<Token>) {
+fn number(mut input: &str) -> Option<(&str, Expression)> {
     let start = input;
     if matches!(peek_char(input), Some(_x @ ('-' | '+' | '.' | '0'..='9'))) {
         input = advance_char(input);
@@ -145,9 +139,9 @@ fn number(mut input: &str) -> (&str, Option<Token>) {
         }
     }
     if let Ok(num) = start[..(start.len() - input.len())].parse::<f64>() {
-        (input, Some(Token::Number(num)))
+        Some((input, Expression::NumLiteral(num)))
     } else {
-        (input, None)
+        None
     }
 }
 
@@ -167,9 +161,9 @@ fn rparen(input: &str) -> Option<&str> {
     }
 }
 
-fn plus(input: &str) -> Option<(&str, Token)> {
+fn plus(input: &str) -> Option<&str> {
     if matches!(peek_char(input), Some('+')) {
-        Some((advance_char(input), Token::Plus))
+        Some(advance_char(input))
     } else {
         None
     }
@@ -186,11 +180,11 @@ mod test {
 
     #[test]
     fn test_ident() {
-        assert_eq!(ident("Adam"), ("", Some(Token::Ident("Adam"))));
+        assert_eq!(ident("Adam"), Some(("", Expression::Ident("Adam"))));
     }
 
     #[test]
     fn test_number() {
-        assert_eq!(number("123.45 "), (" ", Some(Token::Number(123.45))));
+        assert_eq!(number("123.45 "), Some((" ", Expression::NumLiteral(123.45))));
     }
 }
