@@ -9,40 +9,8 @@ use nom::{
     IResult,
 };
 
-fn main() {
-    fn ex_eval<'src>(
-        input: &'src str,
-    ) -> Result<f64, nom::Err<nom::error::Error<&'src str>>> {
-        expr(input).map(|(_, e)| eval(e))
-    }
-
-    let input = "123";
-    println!("source: {:?}, parsed: {:?}", input, ex_eval(input));
-
-    let input = "2 * pi";
-    println!("source: {:?}, parsed: {:?}", input, ex_eval(input));
-
-    let input = "(123 + 456 ) + pi";
-    println!("source: {:?}, parsed: {:?}", input, ex_eval(input));
-
-    let input = "10 - (100 + 1)";
-    println!("source: {:?}, parsed: {:?}", input, ex_eval(input));
-
-    let input = "(3 + 7) / (2 + 3)";
-    println!("source: {:?}, parsed: {:?}", input, ex_eval(input));
-
-    let input = "sqrt(2) / 2";
-    println!("source: {:?}, parsed: {:?}", input, ex_eval(input));
-
-    let input = "sin(pi / 4)";
-    println!("source: {:?}, parsed: {:?}", input, ex_eval(input));
-
-    let input = "atan2(1, 1)";
-    println!("source: {:?}, parsed: {:?}", input, ex_eval(input));
-}
-
 #[derive(Debug, PartialEq, Clone)]
-enum Expression<'src> {
+pub enum Expression<'src> {
     Ident(&'src str),
     NumLiteral(f64),
     FnInvoke(&'src str, Vec<Expression<'src>>),
@@ -50,50 +18,6 @@ enum Expression<'src> {
     Sub(Box<Expression<'src>>, Box<Expression<'src>>),
     Mul(Box<Expression<'src>>, Box<Expression<'src>>),
     Div(Box<Expression<'src>>, Box<Expression<'src>>),
-}
-
-fn unary_fn(f: fn(f64) -> f64) -> impl Fn(Vec<Expression>) -> f64 {
-    move |args| {
-        f(eval(
-            args.into_iter().next().expect("function missing argument"),
-        ))
-    }
-}
-
-fn binary_fn(f: fn(f64, f64) -> f64) -> impl Fn(Vec<Expression>) -> f64 {
-    move |args| {
-        let mut args = args.into_iter();
-        let lhs =
-            eval(args.next().expect("function missing the first argument"));
-        let rhs =
-            eval(args.next().expect("function missing the second argument"));
-        f(lhs, rhs)
-    }
-}
-
-fn eval(expr: Expression) -> f64 {
-    match expr {
-        Expression::Ident("pi") => std::f64::consts::PI,
-        Expression::Ident(id) => panic!("Unknown name {:?}", id),
-        Expression::NumLiteral(n) => n,
-        Expression::FnInvoke("sqrt", args) => unary_fn(f64::sqrt)(args),
-        Expression::FnInvoke("sin", args) => unary_fn(f64::sin)(args),
-        Expression::FnInvoke("cos", args) => unary_fn(f64::cos)(args),
-        Expression::FnInvoke("tan", args) => unary_fn(f64::tan)(args),
-        Expression::FnInvoke("asin", args) => unary_fn(f64::asin)(args),
-        Expression::FnInvoke("acos", args) => unary_fn(f64::acos)(args),
-        Expression::FnInvoke("atan", args) => unary_fn(f64::atan)(args),
-        Expression::FnInvoke("atan2", args) => binary_fn(f64::atan2)(args),
-        Expression::FnInvoke("pow", args) => binary_fn(f64::powf)(args),
-        Expression::FnInvoke("exp", args) => unary_fn(f64::exp)(args),
-        Expression::FnInvoke("log", args) => binary_fn(f64::log)(args),
-        Expression::FnInvoke("log10", args) => unary_fn(f64::log10)(args),
-        Expression::FnInvoke(name, _) => panic!("Unknown function {name:?}"),
-        Expression::Add(lhs, rhs) => eval(*lhs) + eval(*rhs),
-        Expression::Sub(lhs, rhs) => eval(*lhs) - eval(*rhs),
-        Expression::Mul(lhs, rhs) => eval(*lhs) * eval(*rhs),
-        Expression::Div(lhs, rhs) => eval(*lhs) / eval(*rhs),
-    }
 }
 
 fn factor(i: &str) -> IResult<&str, Expression> {
@@ -132,7 +56,7 @@ fn identifier(input: &str) -> IResult<&str, &str> {
 }
 
 fn number(input: &str) -> IResult<&str, Expression> {
-    let (r, v) = delimited(multispace0, recognize_float, multispace0)(input)?;
+    let (r, v) = recognize_float(input)?;
     Ok((
         r,
         Expression::NumLiteral(v.parse().map_err(|_| {
@@ -171,7 +95,7 @@ fn term(i: &str) -> IResult<&str, Expression> {
     )(i)
 }
 
-fn expr(i: &str) -> IResult<&str, Expression> {
+pub fn expr(i: &str) -> IResult<&str, Expression> {
     let (i, init) = term(i)?;
 
     fold_many0(
@@ -186,4 +110,17 @@ fn expr(i: &str) -> IResult<&str, Expression> {
             _ => panic!("Additive expression should have '+' or '-' operator"),
         },
     )(i)
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_number() {
+        assert_eq!(
+            number("123.45 "),
+            Ok((" ", Expression::NumLiteral(123.45)))
+        );
+    }
 }
