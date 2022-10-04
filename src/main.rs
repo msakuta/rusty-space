@@ -60,8 +60,7 @@ pub async fn run() {
         &vec3(0.0, -1.0, -1.0),
     );
 
-    let mut mesh = uv_sphere(32);
-    mesh.transform(&Matrix4::from_angle_x(Deg(-90.))).unwrap();
+    let mesh = uv_sphere(32);
     let mut model = Gm::new(
         Mesh::new(&context, &mesh),
         ColorMaterial {
@@ -74,6 +73,17 @@ pub async fn run() {
     );
     model.material.render_states.cull = Cull::Back;
 
+    let mut mesh_sun = uv_sphere(32);
+    mesh_sun.transform(&Matrix4::from_scale(0.3)).unwrap();
+    let mut model_sun = Gm::new(
+        Mesh::new(&context, &mesh_sun),
+        ColorMaterial {
+            color: Color::WHITE,
+            ..Default::default()
+        },
+    );
+    model_sun.material.render_states.cull = Cull::Back;
+
     // main loop
     window.render_loop(move |mut frame_input| {
         let viewport = Viewport {
@@ -85,9 +95,20 @@ pub async fn run() {
         camera.set_viewport(viewport);
         control.handle_events(&mut camera, &mut frame_input.events);
 
+        model.set_transformation(
+            Matrix4::from_angle_y(Deg(
+                frame_input.accumulated_time as f32 * 0.02
+            )) * Matrix4::from_translation(Vec3::new(2., 0., 0.))
+                * Matrix4::from_angle_y(Deg(frame_input.accumulated_time
+                    as f32
+                    * 0.1))
+                * Matrix4::from_scale(0.1)
+                * Matrix4::from_angle_x(Deg(-90.)),
+        );
+
         frame_input.screen().clear(ClearState::default()).render(
             &camera,
-            &[&skybox, &model],
+            &[&skybox, &model, &model_sun],
             &[&light, &directional],
         );
 
