@@ -17,7 +17,8 @@ astro Earth {
     astro Moon {
         radius: 0.025
         semimajor_axis: 0.25
-        omega: 0.03
-        rotation_omega: 0.1
+        omega: 0.05
+        rotation_omega: 0.05
+        texture: "moon.png"
     }
 }
