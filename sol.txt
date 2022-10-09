@@ -1,0 +1,19 @@
+
+astro Sun {
+    radius: 1.
+    semimajor_axis: 0
+    omega: 0.001
+}
+
+astro Earth {
+    radius: 0.05
+    semimajor_axis: 1
+    omega: 0.01
+    texture: "land_ocean_ice_cloud_2048"
+
+    astro Moon {
+        radius: 0.025
+        semimajor_axis: 0.25 + pi
+        omega: 0.03
+    }
+}
