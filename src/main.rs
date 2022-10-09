@@ -1,8 +1,10 @@
 mod astro_body;
+mod orbit_control_ex;
 mod parser;
 
 use crate::{
     astro_body::{load_astro_body, uv_sphere, AstroBody, BodyContext},
+    orbit_control_ex::OrbitControlEx,
     parser::{commands, Command},
 };
 
@@ -41,7 +43,13 @@ pub async fn run<'src>(commands: Vec<Command<'src>>) {
         0.1,
         1000.0,
     );
-    let mut control = OrbitControl::new(*camera.target(), 1.0, 100.0);
+    let mut control = OrbitControlEx::builder()
+        .target(*camera.target())
+        .min_distance(0.10)
+        .max_distance(100.0)
+        .pan_speed(0.02)
+        .zoom_speed(0.01)
+        .build();
 
     let mut textures = vec!["hipparcossq.jpg".to_owned()];
     for command in &commands {
