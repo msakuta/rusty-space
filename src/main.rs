@@ -2,7 +2,7 @@ mod astro_body;
 mod parser;
 
 use crate::{
-    astro_body::{load_astro_body, uv_sphere, BodyContext},
+    astro_body::{load_astro_body, uv_sphere, AstroBody, BodyContext},
     parser::{commands, Command},
 };
 
@@ -19,7 +19,7 @@ async fn main() -> Result<(), Box<(dyn std::error::Error + 'static)>> {
     Ok(())
 }
 
-use astro_body::apply_transform;
+use astro_body::{apply_transform, scan_textures};
 use three_d::*;
 
 pub async fn run<'src>(commands: Vec<Command<'src>>) {
@@ -43,12 +43,12 @@ pub async fn run<'src>(commands: Vec<Command<'src>>) {
     );
     let mut control = OrbitControl::new(*camera.target(), 1.0, 100.0);
 
-    let mut loaded = three_d_asset::io::load_async(&[
-        "hipparcossq.jpg",
-        "land_ocean_ice_cloud_2048.jpg",
-    ])
-    .await
-    .unwrap();
+    let mut textures = vec!["hipparcossq.jpg".to_owned()];
+    for command in &commands {
+        scan_textures(command, &mut textures);
+    }
+
+    let mut loaded = three_d_asset::io::load_async(&textures).await.unwrap();
 
     let top_tex = loaded.deserialize("hipparcossq").unwrap();
     let skybox = Skybox::new(
@@ -70,7 +70,7 @@ pub async fn run<'src>(commands: Vec<Command<'src>>) {
         loaded: &mut loaded,
         mesh: &mesh,
     };
-    for command in commands {
+    for command in &commands {
         if let Some(body) = load_astro_body(command, &mut body_context) {
             bodies.push(body);
         }
@@ -95,8 +95,23 @@ pub async fn run<'src>(commands: Vec<Command<'src>>) {
             );
         }
 
-        let render_models: Vec<&dyn three_d::Object> =
-            bodies.iter().map(|body| &body.model as _).collect();
+        fn get_render_models<'a, 'b>(
+            body: &'a AstroBody,
+        ) -> Vec<&'b dyn three_d::Object>
+        where
+            'a: 'b,
+        {
+            let mut models = vec![&body.model as &dyn three_d::Object];
+            for body in body.children.iter() {
+                models.extend(get_render_models(&body));
+            }
+            models
+        }
+
+        let mut render_models: Vec<&dyn three_d::Object> = vec![];
+        for body in &bodies {
+            render_models.extend(get_render_models(body));
+        }
 
         frame_input
             .screen()

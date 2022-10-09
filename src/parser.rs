@@ -2,10 +2,9 @@ use nom::{
     branch::alt,
     bytes::complete::tag,
     character::complete::{
-        alpha1, alphanumeric1, anychar, char, multispace0, multispace1,
-        newline, none_of, one_of, space0,
+        alpha1, alphanumeric1, char, multispace0, none_of, one_of, space0,
     },
-    combinator::{not, opt, recognize},
+    combinator::{opt, recognize},
     multi::{fold_many0, many0, many1},
     number::complete::recognize_float,
     sequence::{delimited, pair},
@@ -157,16 +156,6 @@ pub fn expr(i: &str) -> IResult<&str, Expression> {
             _ => panic!("Additive expression should have '+' or '-' operator"),
         },
     )(i)
-}
-
-pub fn block_str(i: &str) -> IResult<&str, String> {
-    fn inner_str(i: &str) -> IResult<&str, String> {
-        let (rest, c) = none_of("}")(i)?;
-        Ok((rest, c.to_string()))
-    }
-    let (rest, ex) =
-        delimited(char('{'), many0(alt((block_str, inner_str))), char('}'))(i)?;
-    Ok((rest, ex.join("")))
 }
 
 pub fn block(i: &str) -> IResult<&str, Arg> {

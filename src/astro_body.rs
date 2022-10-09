@@ -1,14 +1,58 @@
-use crate::parser::{commands, eval, Arg, Command, Property};
+use crate::parser::{eval, Arg, Command, Property};
 
 use three_d::*;
 use three_d_asset::geometry::TriMesh;
 use three_d_asset::io::RawAssets;
 
+fn parse_astro_command<'a, 'src>(
+    command: &'a Command<'src>,
+) -> Option<(String, &'a [Command<'src>])> {
+    if let Command::Com(v) = command {
+        if v.len() < 3 || !matches!(v[0], Arg::Str("astro")) {
+            return None;
+        }
+        let block = &v[2];
+        let name = &v[1];
+        let name = if let Arg::Str(s) = *name {
+            s.to_owned()
+        } else {
+            return None;
+        };
+        let block = if let Arg::Block(s) = block {
+            s
+        } else {
+            return None;
+        };
+        Some((name, block))
+    } else {
+        None
+    }
+}
+
+pub(crate) fn scan_textures(
+    command: &Command,
+    textures: &mut Vec<String>,
+) -> Option<()> {
+    let (_name, block) = parse_astro_command(command)?;
+    for com in block {
+        match com {
+            Command::Prop("texture", Property::Str(value)) => {
+                textures.push(value.clone());
+            }
+            Command::Com(_) => {
+                scan_textures(&com, textures);
+            }
+            _ => (),
+        }
+    }
+    None
+}
 pub(crate) struct AstroBody {
     pub name: String,
     pub radius: f32,
     pub semimajor_axis: f32,
     pub omega: f32,
+    pub rotation_omega: f32,
     pub model: Gm<Mesh, ColorMaterial>,
     pub children: Vec<AstroBody>,
 }
@@ -20,34 +64,15 @@ pub(crate) struct BodyContext<'a> {
 }
 
 pub(crate) fn load_astro_body(
-    command: Command,
+    command: &Command,
     context: &mut BodyContext,
 ) -> Option<AstroBody> {
-    let (name, block) = if let Command::Com(mut v) = command {
-        if v.len() < 3 || !matches!(v[0], Arg::Str("astro")) {
-            return None;
-        }
-        let block = v.swap_remove(2);
-        let name = v.swap_remove(1);
-        let name = if let Arg::Str(s) = name {
-            s.to_owned()
-        } else {
-            return None;
-        };
-        let block = if let Arg::Block(s) = block {
-            s
-        } else {
-            return None;
-        };
-        (name, block)
-    } else {
-        return None;
-    };
-
+    let (name, block) = parse_astro_command(command)?;
     let mut texture = None;
     let mut radius = 0.1;
     let mut semimajor_axis = 1.;
     let mut omega = 1.;
+    let mut rotation_omega = 0.;
     let mut children = vec![];
     for com in block {
         match com {
@@ -63,11 +88,14 @@ pub(crate) fn load_astro_body(
             Command::Prop("omega", Property::Expr(ref value)) => {
                 omega = eval(value) as f32;
             }
+            Command::Prop("rotation_omega", Property::Expr(ref value)) => {
+                rotation_omega = eval(value) as f32;
+            }
             Command::Prop(prop, _) => {
                 println!("Unknown property {prop:?}");
             }
             Command::Com(_) => {
-                if let Some(child) = load_astro_body(com, context) {
+                if let Some(child) = load_astro_body(&com, context) {
                     children.push(child);
                 }
             }
@@ -100,7 +128,7 @@ pub(crate) fn load_astro_body(
     };
 
     println!(
-        "Adding body {name} radius: {radius}, semimajor_axis: {semimajor_axis}"
+        "Adding body {name} radius: {radius}, semimajor_axis: {semimajor_axis}, rotation_omega: {rotation_omega}"
     );
     model.material.render_states.cull = Cull::Back;
     Some(AstroBody {
@@ -108,6 +136,7 @@ pub(crate) fn load_astro_body(
         radius,
         semimajor_axis,
         omega,
+        rotation_omega,
         model,
         children,
     })
@@ -123,12 +152,12 @@ pub(crate) fn apply_transform(
         * Matrix4::from_translation(Vec3::new(body.semimajor_axis, 0., 0.));
 
     let origin = rotation
-        .transform_point(Point3::new(1., 0., 0.))
+        .transform_point(Point3::new(0., 0., 0.))
         .to_homogeneous()
         .truncate();
 
     let revolution = Matrix4::from_translation(origin)
-        * Matrix4::from_angle_y(Deg(frame_time as f32 * 0.1))
+        * Matrix4::from_angle_y(Deg(frame_time as f32 * body.rotation_omega))
         * Matrix4::from_scale(body.radius)
         * Matrix4::from_angle_x(Deg(-90.));
 
