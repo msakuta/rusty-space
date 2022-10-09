@@ -81,7 +81,7 @@ impl OrbitControlEx {
     }
 
     /// Creates a new orbit control with the given target and minimum and maximum distance to the target.
-    pub fn build(target: Vec3, min_distance: f32, max_distance: f32) -> Self {
+    pub fn _build(target: Vec3, min_distance: f32, max_distance: f32) -> Self {
         Self::builder()
             .target(target)
             .min_distance(min_distance)
@@ -95,12 +95,8 @@ impl OrbitControlEx {
         camera: &mut Camera,
         events: &mut [Event],
     ) -> bool {
-        if let CameraAction::Zoom {
-            speed,
-            target,
-            min,
-            max,
-        } = &mut self.control.scroll_vertical
+        if let CameraAction::Zoom { speed, target, .. } =
+            &mut self.control.scroll_vertical
         {
             let x = target.distance(*camera.position());
 
@@ -110,7 +106,7 @@ impl OrbitControlEx {
     }
 }
 
-fn smoothstep(edge0: f32, edge1: f32, x: f32) -> f32 {
+fn _smoothstep(edge0: f32, edge1: f32, x: f32) -> f32 {
     let t = ((x - edge0) / (edge1 - edge0)).max(0.0).min(1.0);
     t * t * (3.0 - 2.0 * t)
 }

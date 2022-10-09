@@ -48,6 +48,7 @@ pub(crate) fn scan_textures(
     None
 }
 pub(crate) struct AstroBody {
+    #[allow(dead_code)]
     pub name: String,
     pub radius: f32,
     pub semimajor_axis: f32,
