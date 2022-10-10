@@ -22,6 +22,12 @@ Note that this project depends on the latest master branch of `three-d` and `thr
 It may break the compilation at some point in time.
 
 
+## Configuration file
+
+This project's main focus is to define and parse the configuration file.
+The sample file is [sol.txt](sol.txt) which is loaded by the program.
+
+
 ## Parser introduction
 
 [examples](examples) folder contains step-by-step implementation of parser with the help of `nom` crate.
