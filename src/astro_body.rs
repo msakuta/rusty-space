@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::parser::{eval, Arg, Command, Property};
 
 use three_d::*;
@@ -62,6 +64,41 @@ pub(crate) struct BodyContext<'a> {
     pub context: &'a Context,
     pub loaded: &'a mut RawAssets,
     pub mesh: &'a TriMesh,
+    variables: HashMap<String, f64>,
+}
+
+impl<'a> BodyContext<'a> {
+    pub fn new(
+        context: &'a Context,
+        loaded: &'a mut RawAssets,
+        mesh: &'a TriMesh,
+    ) -> Self {
+        Self {
+            context,
+            loaded,
+            mesh,
+            variables: HashMap::new(),
+        }
+    }
+}
+
+pub(crate) fn load_astro_bodies(
+    commands: &[Command],
+    context: &mut BodyContext,
+) -> Vec<AstroBody> {
+    let mut bodies = vec![];
+    for command in commands {
+        if let Some(body) = load_astro_body(command, context) {
+            bodies.push(body);
+        }
+        if let Command::Def(name, expr) = command {
+            context
+                .variables
+                .insert((*name).to_owned(), eval(expr, &context.variables));
+            println!("variables: {:?}", context.variables);
+        }
+    }
+    bodies
 }
 
 pub(crate) fn load_astro_body(
@@ -81,16 +118,16 @@ pub(crate) fn load_astro_body(
                 texture = Some(value);
             }
             Command::Prop("radius", Property::Expr(ref value)) => {
-                radius = eval(value) as f32;
+                radius = eval(value, &context.variables) as f32;
             }
             Command::Prop("semimajor_axis", Property::Expr(ref value)) => {
-                semimajor_axis = eval(value) as f32;
+                semimajor_axis = eval(value, &context.variables) as f32;
             }
             Command::Prop("omega", Property::Expr(ref value)) => {
-                omega = eval(value) as f32;
+                omega = eval(value, &context.variables) as f32;
             }
             Command::Prop("rotation_omega", Property::Expr(ref value)) => {
-                rotation_omega = eval(value) as f32;
+                rotation_omega = eval(value, &context.variables) as f32;
             }
             Command::Prop(prop, _) => {
                 println!("Unknown property {prop:?}");
@@ -99,6 +136,12 @@ pub(crate) fn load_astro_body(
                 if let Some(child) = load_astro_body(&com, context) {
                     children.push(child);
                 }
+            }
+            Command::Def(name, expr) => {
+                context
+                    .variables
+                    .insert((*name).to_owned(), eval(expr, &context.variables));
+                println!("variables: {:?}", context.variables);
             }
         }
     }
