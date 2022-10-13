@@ -1,0 +1,16 @@
+The Moon's Surface textures
+---------------------------
+
+Moon surface texture (Edited by author)
+http://wms.lroc.asu.edu/lroc/view_rdr_product/WAC_GLOBAL_E000N1800_004P
+
+Lunar Reconnaissance Orbiter Camera Narrow Angle Camera (LROC NAC): NASA / GSFC / ASU
+Lunar Reconnaissance Orbiter Camera Wide Angle Camera (LROC WAC): NASA / GSFC / ASU
+
+
+Background Star Texture
+-----------------------
+
+"hipparcossq.jpg" was obtained as "hipparcoscyl1.jpg" and modified from:
+
+http://solarviews.com/cap/ds/hipparcoscyl1.htm

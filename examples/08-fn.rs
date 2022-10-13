@@ -31,6 +31,9 @@ fn main() {
     let input = "(3 + 7) / (2 + 3)";
     println!("source: {:?}, parsed: {:?}", input, ex_eval(input));
 
+    let input = "sqrt(2) / 2";
+    println!("source: {:?}, parsed: {:?}", input, ex_eval(input));
+
     let input = "sin(pi / 4)";
     println!("source: {:?}, parsed: {:?}", input, ex_eval(input));
 
