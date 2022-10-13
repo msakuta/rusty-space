@@ -57,6 +57,7 @@ pub(crate) struct AstroBody {
     pub omega: f32,
     pub rotation_omega: f32,
     pub model: Gm<Mesh, ColorMaterial>,
+    pub orbit_model: Option<Gm<Mesh, PhysicalMaterial>>,
     pub children: Vec<AstroBody>,
 }
 
@@ -171,6 +172,30 @@ pub(crate) fn load_astro_body(
         model_sun
     };
 
+    let orbit_model = if 0. < semimajor_axis {
+        let mut orbit = Gm::new(
+            Mesh::new(&context.context, &ring(64, 0.005)),
+            PhysicalMaterial::new_transparent(
+                &context.context,
+                &CpuMaterial {
+                    albedo: Color {
+                        r: 0,
+                        g: 255,
+                        b: 0,
+                        a: 200,
+                    },
+                    ..Default::default()
+                },
+            ),
+        );
+        orbit.set_transformation(
+            Mat4::from_scale(semimajor_axis) * Mat4::from_angle_z(Deg(90.)),
+        );
+        Some(orbit)
+    } else {
+        None
+    };
+
     println!(
         "Adding body {name} radius: {radius}, semimajor_axis: {semimajor_axis}, rotation_omega: {rotation_omega}"
     );
@@ -182,6 +207,7 @@ pub(crate) fn load_astro_body(
         omega,
         rotation_omega,
         model,
+        orbit_model,
         children,
     })
 }
@@ -209,6 +235,12 @@ pub(crate) fn apply_transform(
     // println!("Applying transform to {}: {origin:?}", body.name);
     for child in &mut body.children {
         apply_transform(child, &rotation, frame_time);
+    }
+
+    if let Some(ref mut orbit) = body.orbit_model {
+        orbit.set_transformation(
+            parent_transform * Mat4::from_scale(body.semimajor_axis) * Mat4::from_angle_z(Deg(90.)),
+        );
     }
 }
 
@@ -285,4 +317,63 @@ pub(crate) fn uv_sphere(angle_subdivisions: u32) -> CpuMesh {
         uvs: Some(uvs),
         ..Default::default()
     }
+}
+
+///
+/// Returns a ring-like shape mesh around the x-axis in the range `[0..1]` and with radius 1.
+/// It has "fake" thickness by a cross section with a shape of "+".
+///
+fn ring(angle_subdivisions: u32, ring_thickness: f32) -> TriMesh {
+    let mut positions = Vec::new();
+    let mut indices = Vec::new();
+    for i in 0..2 {
+        let x = (i * 2 - 1) as f32 * ring_thickness;
+        for j in 0..angle_subdivisions {
+            let angle = 2.0 * std::f32::consts::PI * j as f32
+                / angle_subdivisions as f32;
+
+            positions.push(Vec3::new(x, angle.cos(), angle.sin()));
+        }
+    }
+    for i in 0..2 {
+        let r = (i * 2 - 1) as f32 * ring_thickness + 1.;
+        for j in 0..angle_subdivisions {
+            let angle = 2.0 * std::f32::consts::PI * j as f32
+                / angle_subdivisions as f32;
+            positions.push(Vec3::new(0., r * angle.cos(), r * angle.sin()));
+        }
+    }
+    for j in 0..angle_subdivisions {
+        indices.push(j as u16);
+        indices.push(((j + 1) % angle_subdivisions) as u16);
+        indices
+            .push((angle_subdivisions + (j + 1) % angle_subdivisions) as u16);
+
+        indices.push((j) as u16);
+        indices
+            .push((angle_subdivisions + (j + 1) % angle_subdivisions) as u16);
+        indices.push(((1) * angle_subdivisions + j) as u16);
+    }
+    let offset = 2 * angle_subdivisions;
+    for j in 0..angle_subdivisions {
+        indices.push((j + offset) as u16);
+        indices.push(((j + 1) % angle_subdivisions + offset) as u16);
+        indices.push(
+            (angle_subdivisions + (j + 1) % angle_subdivisions + offset) as u16,
+        );
+
+        indices.push((j + offset) as u16);
+        indices.push(
+            (angle_subdivisions + (j + 1) % angle_subdivisions + offset) as u16,
+        );
+        indices.push((angle_subdivisions + j + offset) as u16);
+    }
+    let mut mesh = TriMesh {
+        name: "cylinder".to_string(),
+        positions: Positions::F32(positions),
+        indices: Some(Indices::U16(indices)),
+        ..Default::default()
+    };
+    mesh.compute_normals();
+    mesh
 }

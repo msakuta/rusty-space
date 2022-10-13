@@ -101,6 +101,9 @@ pub async fn run<'src>(commands: Vec<Command<'src>>) {
             'a: 'b,
         {
             let mut models = vec![&body.model as &dyn three_d::Object];
+            if let Some(ref cylinder) = body.orbit_model {
+                models.push(cylinder as &dyn three_d::Object);
+            }
             for body in body.children.iter() {
                 models.extend(get_render_models(&body));
             }
