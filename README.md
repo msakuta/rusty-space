@@ -1,6 +1,6 @@
 # rusty-space
 
-A space simulator for demonstrating [nom](https://github.com/Geal/nom) crate utilization.
+A space simulator for demonstrating recursive descent parser and parser combinator library [nom](https://github.com/Geal/nom).
 
 ![screenshot](rusty-space-screenshot.jpg)
 
