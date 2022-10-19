@@ -63,12 +63,17 @@ pub async fn run<'src>(commands: Vec<Command<'src>>) {
         &context, &top_tex, &top_tex, &top_tex, &top_tex, &top_tex, &top_tex,
     );
 
-    let light = AmbientLight::new(&context, 1.0, Color::WHITE);
-    let directional = DirectionalLight::new(
+    let light = AmbientLight::new(&context, 0.1, Color::WHITE);
+    let point = PointLight::new(
         &context,
-        2.0,
+        10.,
         Color::WHITE,
-        &vec3(0.0, -1.0, -1.0),
+        &Vec3::zero(),
+        Attenuation {
+            constant: 0.,
+            linear: 0.,
+            quadratic: 0.,
+        },
     );
 
     let mesh = uv_sphere(32);
@@ -118,8 +123,8 @@ pub async fn run<'src>(commands: Vec<Command<'src>>) {
         frame_input
             .screen()
             .clear(ClearState::default())
-            .render(&camera, &[&skybox], &[&light, &directional])
-            .render(&camera, &render_models[..], &[&light, &directional]);
+            .render(&camera, &[&skybox], &[])
+            .render(&camera, &render_models[..], &[&light, &point]);
 
         FrameOutput::default()
     });

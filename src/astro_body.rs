@@ -56,7 +56,7 @@ pub(crate) struct AstroBody {
     pub semimajor_axis: f32,
     pub omega: f32,
     pub rotation_omega: f32,
-    pub model: Gm<Mesh, ColorMaterial>,
+    pub model: Gm<Mesh, PhysicalMaterial>,
     pub orbit_model: Option<Gm<Mesh, PhysicalMaterial>>,
     pub children: Vec<AstroBody>,
 }
@@ -150,23 +150,39 @@ pub(crate) fn load_astro_body(
     let mut model = if let Some(texture) = texture {
         Gm::new(
             Mesh::new(&context.context, &context.mesh),
-            ColorMaterial {
-                texture: Some(std::sync::Arc::new(Texture2D::new(
-                    &context.context,
-                    &context.loaded.deserialize(texture).unwrap(),
-                ))),
-                ..Default::default()
-            },
+            PhysicalMaterial::new(
+                &context.context,
+                &CpuMaterial {
+                    roughness: 0.6,
+                    metallic: 0.6,
+                    lighting_model: LightingModel::Cook(
+                        NormalDistributionFunction::TrowbridgeReitzGGX,
+                        GeometryFunction::SmithSchlickGGX,
+                    ),
+                    albedo_texture: Some(
+                        context.loaded.deserialize(texture).unwrap(),
+                    ),
+                    ..Default::default()
+                },
+            ),
         )
     } else {
         let mut mesh_sun = uv_sphere(32);
         mesh_sun.transform(&Matrix4::from_scale(0.3)).unwrap();
         let mut model_sun = Gm::new(
             Mesh::new(&context.context, &mesh_sun),
-            ColorMaterial {
-                color: Color::WHITE,
-                ..Default::default()
-            },
+            PhysicalMaterial::new(
+                &context.context,
+                &CpuMaterial {
+                    roughness: 0.6,
+                    metallic: 0.6,
+                    lighting_model: LightingModel::Cook(
+                        NormalDistributionFunction::TrowbridgeReitzGGX,
+                        GeometryFunction::SmithSchlickGGX,
+                    ),
+                    ..Default::default()
+                },
+            ),
         );
         model_sun.material.render_states.cull = Cull::Back;
         model_sun
@@ -239,7 +255,9 @@ pub(crate) fn apply_transform(
 
     if let Some(ref mut orbit) = body.orbit_model {
         orbit.set_transformation(
-            parent_transform * Mat4::from_scale(body.semimajor_axis) * Mat4::from_angle_z(Deg(90.)),
+            parent_transform
+                * Mat4::from_scale(body.semimajor_axis)
+                * Mat4::from_angle_z(Deg(90.)),
         );
     }
 }
