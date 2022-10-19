@@ -105,7 +105,7 @@ pub async fn run<'src>(commands: Vec<Command<'src>>) {
         where
             'a: 'b,
         {
-            let mut models = vec![&body.model as &dyn three_d::Object];
+            let mut models = vec![body.model.as_ref()];
             if let Some(ref cylinder) = body.orbit_model {
                 models.push(cylinder as &dyn three_d::Object);
             }

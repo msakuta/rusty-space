@@ -6,6 +6,7 @@ astro Sun {
     omega: 0.001
     rotation_omega: 1e-3
     texture: "sun.jpg"
+    star: 1
 }
 
 astro Earth {

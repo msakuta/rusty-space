@@ -49,6 +49,21 @@ pub(crate) fn scan_textures(
     }
     None
 }
+
+pub(crate) enum Object {
+    Color(Gm<Mesh, ColorMaterial>),
+    Physical(Gm<Mesh, PhysicalMaterial>),
+}
+
+impl AsRef<dyn three_d::Object> for Object {
+    fn as_ref(&self) -> &(dyn three_d::Object + 'static) {
+        match self {
+            Self::Color(gm) => gm,
+            Self::Physical(gm) => gm,
+        }
+    }
+}
+
 pub(crate) struct AstroBody {
     #[allow(dead_code)]
     pub name: String,
@@ -56,7 +71,7 @@ pub(crate) struct AstroBody {
     pub semimajor_axis: f32,
     pub omega: f32,
     pub rotation_omega: f32,
-    pub model: Gm<Mesh, PhysicalMaterial>,
+    pub model: Object,
     pub orbit_model: Option<Gm<Mesh, PhysicalMaterial>>,
     pub children: Vec<AstroBody>,
 }
@@ -112,6 +127,7 @@ pub(crate) fn load_astro_body(
     let mut semimajor_axis = 1.;
     let mut omega = 1.;
     let mut rotation_omega = 0.;
+    let mut star = false;
     let mut children = vec![];
     for com in block {
         match com {
@@ -130,6 +146,9 @@ pub(crate) fn load_astro_body(
             Command::Prop("rotation_omega", Property::Expr(ref value)) => {
                 rotation_omega = eval(value, &context.variables) as f32;
             }
+            Command::Prop("star", Property::Expr(ref value)) => {
+                star = eval(value, &context.variables) != 0.;
+            }
             Command::Prop(prop, _) => {
                 println!("Unknown property {prop:?}");
             }
@@ -147,25 +166,43 @@ pub(crate) fn load_astro_body(
         }
     }
 
-    let mut model = if let Some(texture) = texture {
-        Gm::new(
-            Mesh::new(&context.context, &context.mesh),
-            PhysicalMaterial::new(
-                &context.context,
-                &CpuMaterial {
-                    roughness: 0.6,
-                    metallic: 0.6,
-                    lighting_model: LightingModel::Cook(
-                        NormalDistributionFunction::TrowbridgeReitzGGX,
-                        GeometryFunction::SmithSchlickGGX,
-                    ),
-                    albedo_texture: Some(
-                        context.loaded.deserialize(texture).unwrap(),
-                    ),
+    let model = if let Some(texture) = texture {
+        let mesh = Mesh::new(&context.context, &context.mesh);
+        if star {
+            let mut model = Gm::new(
+                mesh,
+                ColorMaterial {
+                    texture: Some(std::sync::Arc::new(Texture2D::new(
+                        &context.context,
+                        &context.loaded.deserialize(texture).unwrap(),
+                    ))),
                     ..Default::default()
                 },
-            ),
-        )
+            );
+            model.material.render_states.cull = Cull::Back;
+            Object::Color(model)
+        } else {
+            let mut model = Gm::new(
+                mesh,
+                PhysicalMaterial::new(
+                    &context.context,
+                    &CpuMaterial {
+                        roughness: 0.6,
+                        metallic: 0.6,
+                        lighting_model: LightingModel::Cook(
+                            NormalDistributionFunction::TrowbridgeReitzGGX,
+                            GeometryFunction::SmithSchlickGGX,
+                        ),
+                        albedo_texture: Some(
+                            context.loaded.deserialize(texture).unwrap(),
+                        ),
+                        ..Default::default()
+                    },
+                ),
+            );
+            model.material.render_states.cull = Cull::Back;
+            Object::Physical(model)
+        }
     } else {
         let mut mesh_sun = uv_sphere(32);
         mesh_sun.transform(&Matrix4::from_scale(0.3)).unwrap();
@@ -185,7 +222,7 @@ pub(crate) fn load_astro_body(
             ),
         );
         model_sun.material.render_states.cull = Cull::Back;
-        model_sun
+        Object::Physical(model_sun)
     };
 
     let orbit_model = if 0. < semimajor_axis {
@@ -215,7 +252,6 @@ pub(crate) fn load_astro_body(
     println!(
         "Adding body {name} radius: {radius}, semimajor_axis: {semimajor_axis}, rotation_omega: {rotation_omega}"
     );
-    model.material.render_states.cull = Cull::Back;
     Some(AstroBody {
         name,
         radius,
@@ -247,7 +283,10 @@ pub(crate) fn apply_transform(
         * Matrix4::from_scale(body.radius)
         * Matrix4::from_angle_x(Deg(-90.));
 
-    body.model.set_transformation(revolution);
+    match &mut body.model {
+        Object::Color(model) => model.set_transformation(revolution),
+        Object::Physical(model) => model.set_transformation(revolution),
+    }
     // println!("Applying transform to {}: {origin:?}", body.name);
     for child in &mut body.children {
         apply_transform(child, &rotation, frame_time);
