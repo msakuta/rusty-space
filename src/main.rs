@@ -95,7 +95,7 @@ pub async fn run<'src>(commands: Vec<Command<'src>>) {
             apply_transform(
                 body,
                 &Matrix4::identity(),
-                frame_input.accumulated_time,
+                frame_input.accumulated_time * 1e-3,
             );
         }
 

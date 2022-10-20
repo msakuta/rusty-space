@@ -140,11 +140,11 @@ pub(crate) fn load_astro_body(
             Command::Prop("semimajor_axis", Property::Expr(ref value)) => {
                 semimajor_axis = eval(value, &context.variables) as f32;
             }
-            Command::Prop("omega", Property::Expr(ref value)) => {
-                omega = eval(value, &context.variables) as f32;
+            Command::Prop("orbit_period", Property::Expr(ref value)) => {
+                omega = 2. * std::f32::consts::PI / eval(value, &context.variables) as f32;
             }
-            Command::Prop("rotation_omega", Property::Expr(ref value)) => {
-                rotation_omega = eval(value, &context.variables) as f32;
+            Command::Prop("rotation_period", Property::Expr(ref value)) => {
+                rotation_omega = 2. * std::f32::consts::PI / eval(value, &context.variables) as f32;
             }
             Command::Prop("star", Property::Expr(ref value)) => {
                 star = eval(value, &context.variables) != 0.;
@@ -270,7 +270,7 @@ pub(crate) fn apply_transform(
     frame_time: f64,
 ) {
     let rotation = parent_transform
-        * Matrix4::from_angle_y(Deg(frame_time as f32 * body.omega))
+        * Matrix4::from_angle_y(Rad(frame_time as f32 * body.omega))
         * Matrix4::from_translation(Vec3::new(body.semimajor_axis, 0., 0.));
 
     let origin = rotation
@@ -279,7 +279,7 @@ pub(crate) fn apply_transform(
         .truncate();
 
     let revolution = Matrix4::from_translation(origin)
-        * Matrix4::from_angle_y(Deg(frame_time as f32 * body.rotation_omega))
+        * Matrix4::from_angle_y(Rad(frame_time as f32 * body.rotation_omega))
         * Matrix4::from_scale(body.radius)
         * Matrix4::from_angle_x(Deg(-90.));
 
