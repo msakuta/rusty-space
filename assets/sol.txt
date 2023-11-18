@@ -1,0 +1,35 @@
+AU = 1
+EARTH_RADIUS = 0.05
+
+astro Sun {
+    radius: 0.1
+    semimajor_axis: 0
+    omega: 0.001
+    rotation_period: 28
+    texture: "sun.jpg"
+    star: 1
+}
+
+astro Earth {
+    radius: EARTH_RADIUS
+    semimajor_axis: AU
+    orbit_period: 365
+    rotation_period: 1
+    texture: "land_ocean_ice_cloud_2048.jpg"
+
+    astro Moon {
+        radius: EARTH_RADIUS * 1737 / 6371
+        semimajor_axis: AU * 0.25
+        orbit_period: 30
+        rotation_period: 0.05
+        texture: "moon.png"
+    }
+}
+
+astro Mars {
+    radius: EARTH_RADIUS * 3389 / 6371
+    semimajor_axis: AU * 1.523
+    orbit_period: 686.9
+    rotation_period: 1
+    texture: "mars.jpg"
+}
