@@ -34,7 +34,9 @@ fn parse_product(terms: Pairs<Rule>) -> Expression {
     let mut last_op = None;
     for value in terms {
         match value.as_rule() {
-            Rule::sum => { product = Some(parse_sum(value)); },
+            Rule::sum => {
+                product = Some(parse_sum(value));
+            }
             Rule::value => {
                 let value = parse_value(value.into_inner().next().unwrap());
                 if let Some((last_product, last_op)) = product.zip(last_op) {

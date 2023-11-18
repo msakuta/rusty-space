@@ -2,6 +2,8 @@
 
 A space simulator for demonstrating recursive descent parser and parser combinator library [nom](https://github.com/Geal/nom).
 
+Try it now on your browser! https://msakuta.github.io/rusty-space/
+
 ![screenshot](rusty-space-screenshot.jpg)
 
 ## Overview
@@ -31,3 +33,8 @@ The sample file is [sol.txt](sol.txt) which is loaded by the program.
 ## Parser introduction
 
 [examples](examples) folder contains step-by-step implementation of parser with the help of `nom` crate.
+
+
+## Build for the web
+
+See [this page](web/README.md) for instructions.
