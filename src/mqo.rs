@@ -163,11 +163,12 @@ fn chunk_object(
     // struct Bone *bone = NULL;
     let mut mirror = false;
     let mut mirror_axis = 0;
+    let mut mirrornv = [0u16; 3];
     let mut positions: Vec<Vector3<f32>> = vec![];
     let mut faces = vec![];
     let mut materials = vec![0u16; 0];
 
-    let line = read_line(is)?;
+    let _ = read_line(is)?;
 
     /* forward until vertex chunk */
     while let Ok(line) = read_line(is) {
@@ -274,22 +275,37 @@ fn chunk_object(
     if mirror {
         for m in 0..3 {
             // Check for each axis if it's flagged for mirroring.
-            if (mirror_axis & (1 << m)) != 0 {
-                println!("Object {name}: Mirroring axis {m}");
-                // Mirrored vertices have simply negated coordinate along axis perpendicular to the mirror.
-                for i in 0..positions.len() {
-                    let mut v = positions[i];
-                    if m == 0 {
-                        v.x *= -1.;
-                    } else if m == 1 {
-                        v.y *= -1.;
-                    } else if m == 2 {
-                        v.z *= -1.;
-                    }
-                    positions.push(v);
+            if (mirror_axis & (1 << m)) == 0 {
+                continue;
+            }
+            mirrornv[m] = positions.len() as u16;
+            writeln!(logger, "Object {name}: Mirroring axis {m}")?;
+            // Mirrored vertices have simply negated coordinate along axis perpendicular to the mirror.
+            for i in 0..positions.len() {
+                let mut v = positions[i];
+                if m == 0 {
+                    v.x *= -1.;
+                } else if m == 1 {
+                    v.y *= -1.;
+                } else if m == 2 {
+                    v.z *= -1.;
                 }
-                // mirrornv[m] = n;
-                // n = ret->nv *= 2;
+                positions.push(v);
+            }
+        }
+
+        for m in 0..3 {
+            if (mirror_axis & (1 << m)) == 0 {
+                continue;
+            }
+            let n = faces.len() / 3;
+            for i in 0..n {
+                let mut dest = [0u16; 3];
+                for (j, d) in dest.iter_mut().enumerate() {
+                    // Flip face direction because it's mirrored.
+                    *d = faces[i * 3 + 2 - j] + mirrornv[m];
+                }
+                faces.extend_from_slice(&dest);
             }
         }
     }
