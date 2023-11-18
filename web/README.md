@@ -1,6 +1,6 @@
 # Build for the web
 
-In order to build the `three-d` examples for the web, you can follow these steps. All commands should run in this `web/` directory.
+Follow these steps to build the web page with Wasm. All commands should run in this `web/` directory.
 
 1. Make sure you have both `Rust`, `npm` (which should include `npx`) and `wasm-pack` installed.
 
