@@ -1,9 +1,11 @@
 mod astro_body;
+mod mqo;
 mod orbit_control_ex;
 mod parser;
 
 use crate::{
     astro_body::{uv_sphere, AstroBody, BodyContext},
+    mqo::{load_mqo, load_mqo_scale},
     orbit_control_ex::OrbitControlEx,
     parser::{commands, Command},
 };
@@ -17,14 +19,30 @@ async fn main() -> Result<(), Box<(dyn std::error::Error + 'static)>> {
         println!("commands: {commands:#?}");
         commands
     };
-    run(commands).await;
+    run(commands).await?;
     Ok(())
 }
 
 use astro_body::{apply_transform, load_astro_bodies, scan_textures};
 use three_d::*;
 
-pub async fn run<'src>(commands: Vec<Command<'src>>) {
+pub async fn run<'src>(
+    commands: Vec<Command<'src>>,
+) -> Result<(), Box<(dyn std::error::Error + 'static)>> {
+    let mut mqo_reader =
+        std::io::BufReader::new(std::fs::File::open("A10.mqo")?);
+    let mut meshes = vec![];
+    let mut names = vec![];
+    load_mqo_scale(
+        &mut mqo_reader,
+        &mut meshes,
+        &mut names,
+        None,
+        0.1,
+        &|| (),
+    )?;
+    println!("meshes: {}", meshes.len());
+
     let window = Window::new(WindowSettings {
         title: "Rusty-space".to_string(),
         min_size: (512, 512),
@@ -77,7 +95,8 @@ pub async fn run<'src>(commands: Vec<Command<'src>>) {
     );
 
     let mesh = uv_sphere(32);
-    let mut body_context = BodyContext::new(&context, &mut loaded, &mesh);
+    let mut body_context =
+        BodyContext::new(&context, &mut loaded, &mesh, &meshes[0]);
     let mut bodies = load_astro_bodies(&commands, &mut body_context);
 
     // main loop
@@ -128,4 +147,6 @@ pub async fn run<'src>(commands: Vec<Command<'src>>) {
 
         FrameOutput::default()
     });
+
+    Ok(())
 }

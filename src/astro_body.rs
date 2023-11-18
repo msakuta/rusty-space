@@ -80,6 +80,7 @@ pub(crate) struct BodyContext<'a> {
     pub context: &'a Context,
     pub loaded: &'a mut RawAssets,
     pub mesh: &'a TriMesh,
+    pub obj_mesh: &'a TriMesh,
     variables: HashMap<String, f64>,
 }
 
@@ -88,11 +89,13 @@ impl<'a> BodyContext<'a> {
         context: &'a Context,
         loaded: &'a mut RawAssets,
         mesh: &'a TriMesh,
+        obj_mesh: &'a TriMesh,
     ) -> Self {
         Self {
             context,
             loaded,
             mesh,
+            obj_mesh,
             variables: HashMap::new(),
         }
     }
@@ -141,10 +144,12 @@ pub(crate) fn load_astro_body(
                 semimajor_axis = eval(value, &context.variables) as f32;
             }
             Command::Prop("orbit_period", Property::Expr(ref value)) => {
-                omega = 2. * std::f32::consts::PI / eval(value, &context.variables) as f32;
+                omega = 2. * std::f32::consts::PI
+                    / eval(value, &context.variables) as f32;
             }
             Command::Prop("rotation_period", Property::Expr(ref value)) => {
-                rotation_omega = 2. * std::f32::consts::PI / eval(value, &context.variables) as f32;
+                rotation_omega = 2. * std::f32::consts::PI
+                    / eval(value, &context.variables) as f32;
             }
             Command::Prop("star", Property::Expr(ref value)) => {
                 star = eval(value, &context.variables) != 0.;
@@ -204,7 +209,8 @@ pub(crate) fn load_astro_body(
             Object::Physical(model)
         }
     } else {
-        let mut mesh_sun = uv_sphere(32);
+        // let mut mesh_sun = uv_sphere(32);
+        let mut mesh_sun = context.obj_mesh.clone();
         mesh_sun.transform(&Matrix4::from_scale(0.3)).unwrap();
         let mut model_sun = Gm::new(
             Mesh::new(&context.context, &mesh_sun),

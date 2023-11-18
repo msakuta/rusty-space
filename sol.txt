@@ -33,3 +33,10 @@ astro Mars {
     rotation_period: 1
     texture: "mars.jpg"
 }
+
+astro A10 {
+    radius: 0.1
+    semimajor_axis: AU * 2
+    omega: 0.001
+    rotation_period: 28
+}
