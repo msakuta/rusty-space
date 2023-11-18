@@ -39,4 +39,5 @@ astro A10 {
     semimajor_axis: AU * 2
     omega: 0.001
     rotation_period: 28
+    orbit_period: 1200
 }

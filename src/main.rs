@@ -96,7 +96,7 @@ pub async fn run<'src>(
 
     let mesh = uv_sphere(32);
     let mut body_context =
-        BodyContext::new(&context, &mut loaded, &mesh, &meshes[0]);
+        BodyContext::new(&context, &mut loaded, &mesh, &meshes);
     let mut bodies = load_astro_bodies(&commands, &mut body_context);
 
     // main loop
@@ -124,7 +124,7 @@ pub async fn run<'src>(
         where
             'a: 'b,
         {
-            let mut models = vec![body.model.as_ref()];
+            let mut models = body.model.to_vec();
             if let Some(ref cylinder) = body.orbit_model {
                 models.push(cylinder as &dyn three_d::Object);
             }

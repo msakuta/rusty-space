@@ -1,6 +1,10 @@
 //! Implementation of Metasequoia object loading functions and Model class.
 
-use std::{error::Error, io::Read, str::FromStr};
+use std::{
+    error::Error,
+    io::{Read, Write},
+    str::FromStr,
+};
 
 use three_d_asset::{prelude::Vector3, Indices, Positions, TriMesh};
 
@@ -32,9 +36,7 @@ pub fn load_mqo_scale(
     // Mesh::Index atr = USHRT_MAX; /* current attribute index */
     // int num = 0;
 
-    // if is.() || !is.good())
-    // 	return 0;
-    // FPOS fo(is);
+    let mut logger = std::io::sink();
 
     if let Some(bones) = bones {
         *bones = vec![];
@@ -64,9 +66,12 @@ pub fn load_mqo_scale(
                 //     return NULL;
             }
             "object" => {
-                let s = read_token(is)?;
-                pname.push(s);
-                pret.push(chunk_object(is, scale)?);
+                let name = read_token(is)?;
+                pname.push(name.clone());
+                if let Some(obj) = chunk_object(is, scale, &name, &mut logger)?
+                {
+                    pret.push(obj);
+                }
             }
             "eof" => return Ok(()),
             _ => {
@@ -145,7 +150,9 @@ fn chunk_material(is: &mut impl Read) -> Result<(), Box<dyn Error>> {
 fn chunk_object(
     is: &mut impl Read,
     scale: f32,
-) -> Result<TriMesh, Box<dyn Error>> {
+    name: &str,
+    logger: &mut impl Write,
+) -> Result<Option<TriMesh>, Box<dyn Error>> {
     // char *s, *name = NULL;
     // int n, i, j;
     // Mesh::Attrib *patr;
@@ -156,14 +163,11 @@ fn chunk_object(
     // struct Bone *bone = NULL;
     let mut mirror = false;
     let mut mirror_axis = 0;
-    let mut mirrors = 0;
-    // int mirrornv[3];
     let mut positions: Vec<Vector3<f32>> = vec![];
     let mut faces = vec![];
     let mut materials = vec![0u16; 0];
 
     let line = read_line(is)?;
-    let (r, name) = quotok(&line)?;
 
     /* forward until vertex chunk */
     while let Ok(line) = read_line(is) {
@@ -206,6 +210,10 @@ fn chunk_object(
                     }
                     let (mut r, s) = quotok(&line)?;
                     let dims = parse_u8(&s)?;
+                    if dims != 3 {
+                        // We don't support non-3d geometry
+                        continue;
+                    }
                     r = skip_whitespace(r);
                     if &r[..2] != b"V(" {
                         continue;
@@ -249,23 +257,16 @@ fn chunk_object(
             }
             b"mirror_axis" => {
                 mirror_axis = parse_u8(&quotok(&r)?.1)?;
-
-                // There could be multiple mirrors for a object, so we count it for allocating space.
-                mirrors = 0;
-                for m in 0..3 {
-                    if (mirror_axis & (1 << m)) != 0 {
-                        mirrors += 1;
-                    }
-                }
             }
             b"}" => break,
             _ => {
                 // Unrecognized attr is not an error. Log and ignore
-                println!(
+                writeln!(
+                    logger,
                     "Unexpected attr {}",
                     String::from_utf8(attr_name)
                         .unwrap_or_else(|s| s.to_string())
-                );
+                )?;
             }
         }
     }
@@ -274,11 +275,16 @@ fn chunk_object(
         for m in 0..3 {
             // Check for each axis if it's flagged for mirroring.
             if (mirror_axis & (1 << m)) != 0 {
+                println!("Object {name}: Mirroring axis {m}");
                 // Mirrored vertices have simply negated coordinate along axis perpendicular to the mirror.
                 for i in 0..positions.len() {
                     let mut v = positions[i];
                     if m == 0 {
                         v.x *= -1.;
+                    } else if m == 1 {
+                        v.y *= -1.;
+                    } else if m == 2 {
+                        v.z *= -1.;
                     }
                     positions.push(v);
                 }
@@ -288,9 +294,13 @@ fn chunk_object(
         }
     }
 
+    if positions.is_empty() || faces.is_empty() {
+        return Ok(None);
+    }
+
     let mut ret = TriMesh {
         positions: Positions::F32(positions),
-        name: String::from_utf8(name)?,
+        name: name.to_string(),
         material_name: None,
         indices: Some(Indices::U16(faces)),
         normals: None,
@@ -299,7 +309,7 @@ fn chunk_object(
         colors: None,
     };
     ret.compute_normals();
-    Ok(ret)
+    Ok(Some(ret))
 }
 
 fn read_token(r: &mut impl Read) -> Result<String, Box<dyn Error>> {

@@ -52,14 +52,23 @@ pub(crate) fn scan_textures(
 
 pub(crate) enum Object {
     Color(Gm<Mesh, ColorMaterial>),
-    Physical(Gm<Mesh, PhysicalMaterial>),
+    Physical(Vec<Gm<Mesh, PhysicalMaterial>>),
 }
 
-impl AsRef<dyn three_d::Object> for Object {
-    fn as_ref(&self) -> &(dyn three_d::Object + 'static) {
+// impl AsRef<dyn three_d::Object> for Object {
+//     fn as_ref(&self) -> &(dyn three_d::Object + 'static) {
+//         match self {
+//             Self::Color(gm) => gm,
+//             Self::Physical(gm) => gm,
+//         }
+//     }
+// }
+
+impl Object {
+    pub fn to_vec(&self) -> Vec<&dyn three_d::Object> {
         match self {
-            Self::Color(gm) => gm,
-            Self::Physical(gm) => gm,
+            Self::Color(gm) => vec![gm],
+            Self::Physical(gm) => gm.iter().map(|gm| gm as &_).collect(),
         }
     }
 }
@@ -80,7 +89,7 @@ pub(crate) struct BodyContext<'a> {
     pub context: &'a Context,
     pub loaded: &'a mut RawAssets,
     pub mesh: &'a TriMesh,
-    pub obj_mesh: &'a TriMesh,
+    pub obj_meshes: &'a [TriMesh],
     variables: HashMap<String, f64>,
 }
 
@@ -89,13 +98,13 @@ impl<'a> BodyContext<'a> {
         context: &'a Context,
         loaded: &'a mut RawAssets,
         mesh: &'a TriMesh,
-        obj_mesh: &'a TriMesh,
+        obj_meshes: &'a [TriMesh],
     ) -> Self {
         Self {
             context,
             loaded,
             mesh,
-            obj_mesh,
+            obj_meshes,
             variables: HashMap::new(),
         }
     }
@@ -206,29 +215,36 @@ pub(crate) fn load_astro_body(
                 ),
             );
             model.material.render_states.cull = Cull::Back;
-            Object::Physical(model)
+            Object::Physical(vec![model])
         }
     } else {
         // let mut mesh_sun = uv_sphere(32);
-        let mut mesh_sun = context.obj_mesh.clone();
-        mesh_sun.transform(&Matrix4::from_scale(0.3)).unwrap();
-        let mut model_sun = Gm::new(
-            Mesh::new(&context.context, &mesh_sun),
-            PhysicalMaterial::new(
-                &context.context,
-                &CpuMaterial {
-                    roughness: 0.6,
-                    metallic: 0.6,
-                    lighting_model: LightingModel::Cook(
-                        NormalDistributionFunction::TrowbridgeReitzGGX,
-                        GeometryFunction::SmithSchlickGGX,
+        let model_meshes = context
+            .obj_meshes
+            .iter()
+            .map(|mesh| {
+                let mut mesh_sun = mesh.clone();
+                mesh_sun.transform(&Matrix4::from_scale(0.3)).unwrap();
+                let mut model_sun = Gm::new(
+                    Mesh::new(&context.context, &mesh_sun),
+                    PhysicalMaterial::new(
+                        &context.context,
+                        &CpuMaterial {
+                            roughness: 0.6,
+                            metallic: 0.6,
+                            lighting_model: LightingModel::Cook(
+                                NormalDistributionFunction::TrowbridgeReitzGGX,
+                                GeometryFunction::SmithSchlickGGX,
+                            ),
+                            ..Default::default()
+                        },
                     ),
-                    ..Default::default()
-                },
-            ),
-        );
-        model_sun.material.render_states.cull = Cull::Back;
-        Object::Physical(model_sun)
+                );
+                model_sun.material.render_states.cull = Cull::Back;
+                model_sun
+            })
+            .collect();
+        Object::Physical(model_meshes)
     };
 
     let orbit_model = if 0. < semimajor_axis {
@@ -291,7 +307,11 @@ pub(crate) fn apply_transform(
 
     match &mut body.model {
         Object::Color(model) => model.set_transformation(revolution),
-        Object::Physical(model) => model.set_transformation(revolution),
+        Object::Physical(model) => {
+            for gm in model.iter_mut() {
+                gm.set_transformation(revolution)
+            }
+        }
     }
     // println!("Applying transform to {}: {origin:?}", body.name);
     for child in &mut body.children {
