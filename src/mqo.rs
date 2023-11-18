@@ -12,11 +12,9 @@ pub struct Bone {}
 
 pub fn load_mqo(
     is: &mut impl Read,
-    pret: &mut Vec<TriMesh>,
-    pname: &mut Vec<String>,
     bones: Option<&mut Vec<Bone>>,
-) -> Result<(), Box<dyn Error>> {
-    load_mqo_scale(is, pret, pname, bones, 1., &|| ())
+) -> Result<Vec<TriMesh>, Box<dyn Error>> {
+    load_mqo_scale(is, bones, 1., &|| ())
 }
 
 type MqoTextureCallback = dyn Fn();
@@ -24,17 +22,11 @@ type MqoTextureCallback = dyn Fn();
 /// Load Metasequoia object with scaling and a texture callback.
 pub fn load_mqo_scale(
     is: &mut impl Read,
-    pret: &mut Vec<TriMesh>,
-    pname: &mut Vec<String>,
     bones: Option<&mut Vec<Bone>>,
     scale: f32,
     tex_callback: &MqoTextureCallback,
-) -> Result<(), Box<dyn Error>> {
-    // char buf[128], *s = NULL, *name = NULL;
-    // Mesh **ret = NULL;
-    // Mesh *sufatr = NULL;
-    // Mesh::Index atr = USHRT_MAX; /* current attribute index */
-    // int num = 0;
+) -> Result<Vec<TriMesh>, Box<dyn Error>> {
+    let mut ret = vec![];
 
     let mut logger = std::io::sink();
 
@@ -62,18 +54,14 @@ pub fn load_mqo_scale(
             "material" => {
                 println!("reading material chunk");
                 chunk_material(is)?;
-                // if(!chunk_material(sufatr, &fo))
-                //     return NULL;
             }
             "object" => {
                 let name = read_token(is)?;
-                pname.push(name.clone());
-                if let Some(obj) = chunk_object(is, scale, &name, &mut logger)?
-                {
-                    pret.push(obj);
+                if let Some(obj) = chunk_object(is, scale, name, &mut logger)? {
+                    ret.push(obj);
                 }
             }
-            "eof" => return Ok(()),
+            "eof" => return Ok(ret),
             _ => {
                 println!("Skipping unrecognized chunk {s}");
                 loop {
@@ -91,16 +79,14 @@ pub fn load_mqo_scale(
             }
         }
     }
-    Ok(())
+    Ok(ret)
 }
 
 #[test]
 fn test_mqo() {
     let mut mqo_reader =
         std::io::BufReader::new(std::fs::File::open("A10.mqo").unwrap());
-    let mut meshes = vec![];
-    let mut names = vec![];
-    load_mqo(&mut mqo_reader, &mut meshes, &mut names, None).unwrap();
+    let meshes = load_mqo(&mut mqo_reader, None).unwrap();
     println!("meshes: {}", meshes.len());
 }
 
@@ -150,7 +136,7 @@ fn chunk_material(is: &mut impl Read) -> Result<(), Box<dyn Error>> {
 fn chunk_object(
     is: &mut impl Read,
     scale: f32,
-    name: &str,
+    name: String,
     logger: &mut impl Write,
 ) -> Result<Option<TriMesh>, Box<dyn Error>> {
     // char *s, *name = NULL;
@@ -316,7 +302,7 @@ fn chunk_object(
 
     let mut ret = TriMesh {
         positions: Positions::F32(positions),
-        name: name.to_string(),
+        name,
         material_name: None,
         indices: Some(Indices::U16(faces)),
         normals: None,

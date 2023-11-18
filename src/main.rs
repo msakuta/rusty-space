@@ -31,16 +31,7 @@ pub async fn run<'src>(
 ) -> Result<(), Box<(dyn std::error::Error + 'static)>> {
     let mut mqo_reader =
         std::io::BufReader::new(std::fs::File::open("A10.mqo")?);
-    let mut meshes = vec![];
-    let mut names = vec![];
-    load_mqo_scale(
-        &mut mqo_reader,
-        &mut meshes,
-        &mut names,
-        None,
-        0.1,
-        &|| (),
-    )?;
+    let meshes = load_mqo_scale(&mut mqo_reader, None, 0.1, &|| ())?;
     println!("meshes: {}", meshes.len());
 
     let window = Window::new(WindowSettings {
