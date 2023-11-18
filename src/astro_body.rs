@@ -141,10 +141,12 @@ pub(crate) fn load_astro_body(
                 semimajor_axis = eval(value, &context.variables) as f32;
             }
             Command::Prop("orbit_period", Property::Expr(ref value)) => {
-                omega = 2. * std::f32::consts::PI / eval(value, &context.variables) as f32;
+                omega = 2. * std::f32::consts::PI
+                    / eval(value, &context.variables) as f32;
             }
             Command::Prop("rotation_period", Property::Expr(ref value)) => {
-                rotation_omega = 2. * std::f32::consts::PI / eval(value, &context.variables) as f32;
+                rotation_omega = 2. * std::f32::consts::PI
+                    / eval(value, &context.variables) as f32;
             }
             Command::Prop("star", Property::Expr(ref value)) => {
                 star = eval(value, &context.variables) != 0.;
@@ -172,10 +174,13 @@ pub(crate) fn load_astro_body(
             let mut model = Gm::new(
                 mesh,
                 ColorMaterial {
-                    texture: Some(std::sync::Arc::new(Texture2D::new(
-                        &context.context,
-                        &context.loaded.deserialize(texture).unwrap(),
-                    ))),
+                    texture: Some(
+                        Texture2D::new(
+                            &context.context,
+                            &context.loaded.deserialize(texture).unwrap(),
+                        )
+                        .into(),
+                    ),
                     ..Default::default()
                 },
             );
@@ -367,8 +372,7 @@ pub(crate) fn uv_sphere(angle_subdivisions: u32) -> CpuMesh {
     }
 
     three_d_asset::geometry::TriMesh {
-        name: "sphere".to_string(),
-        indices: Some(Indices::U16(indices)),
+        indices: Indices::U16(indices),
         positions: Positions::F32(positions),
         normals: Some(normals),
         uvs: Some(uvs),
@@ -426,9 +430,8 @@ fn ring(angle_subdivisions: u32, ring_thickness: f32) -> TriMesh {
         indices.push((angle_subdivisions + j + offset) as u16);
     }
     let mut mesh = TriMesh {
-        name: "cylinder".to_string(),
         positions: Positions::F32(positions),
-        indices: Some(Indices::U16(indices)),
+        indices: Indices::U16(indices),
         ..Default::default()
     };
     mesh.compute_normals();
