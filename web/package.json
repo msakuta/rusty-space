@@ -1,7 +1,7 @@
 {
     "scripts": {
-        "build": "webpack",
-        "serve": "webpack serve"
+        "build": "webpack --config webpack.prod.js",
+        "serve": "webpack serve --open --config webpack.dev.js"
     },
     "devDependencies": {
         "html-webpack-plugin": "^5.5.3",
