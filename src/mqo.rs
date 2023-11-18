@@ -85,7 +85,7 @@ pub fn load_mqo_scale(
 #[test]
 fn test_mqo() {
     let mut mqo_reader =
-        std::io::BufReader::new(std::fs::File::open("A10.mqo").unwrap());
+        std::io::BufReader::new(std::fs::File::open("models/A10.mqo").unwrap());
     let meshes = load_mqo(&mut mqo_reader, None).unwrap();
     println!("meshes: {}", meshes.len());
 }

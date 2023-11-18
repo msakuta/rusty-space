@@ -30,7 +30,7 @@ pub async fn run<'src>(
     commands: Vec<Command<'src>>,
 ) -> Result<(), Box<(dyn std::error::Error + 'static)>> {
     let mut mqo_reader =
-        std::io::BufReader::new(std::fs::File::open("A10.mqo")?);
+        std::io::BufReader::new(std::fs::File::open("models/F15.mqo")?);
     let meshes = load_mqo_scale(&mut mqo_reader, None, 0.1, &|| ())?;
     println!("meshes: {}", meshes.len());
 
