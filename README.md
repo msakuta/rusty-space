@@ -20,14 +20,11 @@ This project uses [`three-d`](https://github.com/asny/three-d) crate for 3-d ren
 * Install [Rust](https://www.rust-lang.org/)
 * Run `cargo r`
 
-Note that this project depends on the latest master branch of `three-d` and `three-d-asset` crates for unpublished features.
-It may break the compilation at some point in time.
-
 
 ## Configuration file
 
 This project's main focus is to define and parse the configuration file.
-The sample file is [sol.txt](sol.txt) which is loaded by the program.
+The sample file is [sol.txt](assets/sol.txt) which is loaded by the program.
 
 
 ## Parser introduction
